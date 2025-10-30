@@ -1,14 +1,12 @@
-require("dotenv").config();
-const stripe = require("stripe")(
- process.env.STRIPE_PRIVATE_KEY
-);
-
 const express = require("express");
 const admin = require("firebase-admin");
 const moment = require("moment");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const serviceAccount = require("./serviceAccountKey.json");
+
+require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 
 const app = express();
 const port = 5000;
@@ -18,8 +16,7 @@ app.use(bodyParser.json());
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL:
-    process.env.databaseURL,
+  databaseURL: process.env.databaseURL,
 });
 
 app.use(cors({ origin: "http://localhost:3000" }));
@@ -55,7 +52,6 @@ app.post("/api/v1/create-subscription-checkout-session", async (req, res) => {
   const pro = process.env.pro;
   const business = process.env.business;
   try {
-    
     const session = await stripeSession(plan);
 
     const user = await admin.auth().getUser(customerId);
@@ -98,7 +94,7 @@ app.post("/api/v1/create-subscription-checkout-session", async (req, res) => {
           .set({ subscription: { planId: business } }, { merge: true });
       }
     }
-    
+
     res.json({ session });
   } catch (error) {
     res.send(error.message);
