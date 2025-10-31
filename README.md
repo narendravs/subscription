@@ -44,3 +44,7 @@ Monorepo containing a Firebase-backed subscription app with separate Backend (No
 ## Scripts Reference
 
 See individual package READMEs for available scripts and details.
+
+# Subscription images
+
+<img width="580" height="304" alt="Image" src="https://github.com/user-attachments/assets/40f17365-cad1-4703-9ba2-e3a5d433cfae" />
