@@ -15,6 +15,12 @@ app.use(bodyParser.json());
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
+if (!serviceAccount) {
+  throw new Error(
+    "FIREBASE_SERVICE_ACCOUNT is not defined in environment variables",
+  );
+}
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.databaseURL,
@@ -111,74 +117,81 @@ app.post("/api/v1/create-subscription-checkout-session", async (req, res) => {
 
     res.json({ session });
   } catch (error) {
-    res.send(error.message);
+    console.error("Stripe Error:", error);
+    // Use res.status().json() so the client knows it's an error and gets a JSON object
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
 app.post("/api/v1/payment-success", async (req, res) => {
   const { sessionId, firebaseId } = req.body;
 
+  if (!sessionId || !firebaseId) {
+    return res.status(400).json({ message: "Missing sessionId or firebaseId" });
+  }
+
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status === "paid") {
-      const subscriptionId = session.subscription;
-      try {
-        const subscription =
-          await stripe.subscriptions.retrieve(subscriptionId);
-        const user = await admin.auth().getUser(firebaseId);
-        const planId = await admin
-          .firestore()
-          .collection("users")
-          .doc(user.uid)
-          .get()
-          .then((snapshot) => {
-            const data = snapshot.data();
-            const planId = data.subscription.planId;
-            return planId;
-          });
-        const planType =
-          session.amount_total === 9900
-            ? "basic"
-            : 9990
-              ? "pro"
-              : "business" || null;
-        const startDate = moment.unix(session.created).format("YYYY-MM-DD");
-        const endDate = moment.unix(session.expires_at).format("YYYY-MM-DD");
 
-        let date1 = new Date(startDate);
-        let date2 = new Date(endDate);
-
-        const durationInSeconds = (date2.getTime() - date1.getTime()) / 1000;
-        let Difference_In_Time = date2.getTime() - date1.getTime();
-        let durationInDays = Math.round(
-          Difference_In_Time / (1000 * 3600 * 24),
-        );
-        await admin
-          .firestore()
-          .collection("users")
-          .doc(user.uid)
-          .set(
-            {
-              subscription: {
-                planId: planId,
-                planType: planType,
-                planStartDate: startDate,
-                planEndDate: endDate,
-                planDuration: durationInDays,
-              },
-            },
-            { merge: true },
-          );
-      } catch (error) {
-        console.error("Error retrieving subscription:", error);
-      }
-      return res.json({ message: "Payment successfull" });
-    } else {
-      return res.json({ message: "Payment failed" });
+    if (session.payment_status !== "paid") {
+      return res.status(400).json({ message: "Payment not verified" });
     }
+
+    const subscriptionId = session.subscription;
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    // Use the firebaseId directly to get the user
+    const userDocRef = admin.firestore().collection("users").doc(firebaseId);
+    const snapshot = await userDocRef.get();
+
+    if (!snapshot.exists) {
+      throw new Error("User record not found in database");
+    }
+
+    const userData = snapshot.data();
+    const planId = userData.subscription?.planId;
+
+    // Fixed ternary logic (your original had a logic bug in the 'pro' check)
+    const planType =
+      session.amount_total === 9900
+        ? "basic"
+        : session.amount_total === 49900
+          ? "pro"
+          : "business";
+
+    const startDate = moment.unix(session.created).format("YYYY-MM-DD");
+    // Use subscription period end for accuracy instead of session expiry
+    const endDate = moment
+      .unix(subscription.current_period_end)
+      .format("YYYY-MM-DD");
+
+    const durationInDays = moment(endDate).diff(moment(startDate), "days");
+
+    await userDocRef.set(
+      {
+        subscription: {
+          planId,
+          planType,
+          planStartDate: startDate,
+          planEndDate: endDate,
+          planDuration: durationInDays,
+          status: "active", // Good to track status
+        },
+      },
+      { merge: true },
+    );
+
+    return res.json({ success: true, message: "Payment successful" });
   } catch (error) {
-    console.log(error);
-    return;
+    console.error("Payment Success Error:", error);
+    // Explicitly tell the client it failed
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error updating subscription",
+    });
   }
 });
 app.listen(port, () => {
