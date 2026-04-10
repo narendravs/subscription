@@ -9,7 +9,7 @@ require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT;
 
 app.use(express.json());
 app.use(bodyParser.json());
@@ -19,7 +19,15 @@ admin.initializeApp({
   databaseURL: process.env.databaseURL,
 });
 
-app.use(cors({ origin: "http://localhost:3000" }));
+const corsOptions = {
+  // Must match your Vite dev server URL exactly
+  origin: "http://localhost:5173",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 const stripeSession = async (plan) => {
   let planId = null;
@@ -43,17 +51,17 @@ const stripeSession = async (plan) => {
     });
     return session;
   } catch (e) {
-    return e;
+    throw e; // Throw so the caller hits the catch block
   }
 };
 app.post("/api/v1/create-subscription-checkout-session", async (req, res) => {
   const { plan, customerId } = req.body;
   const basic = process.env.basic;
+
   const pro = process.env.pro;
   const business = process.env.business;
   try {
     const session = await stripeSession(plan);
-
     const user = await admin.auth().getUser(customerId);
 
     await admin
@@ -109,9 +117,8 @@ app.post("/api/v1/payment-success", async (req, res) => {
     if (session.payment_status === "paid") {
       const subscriptionId = session.subscription;
       try {
-        const subscription = await stripe.subscriptions.retrieve(
-          subscriptionId
-        );
+        const subscription =
+          await stripe.subscriptions.retrieve(subscriptionId);
         const user = await admin.auth().getUser(firebaseId);
         const planId = await admin
           .firestore()
@@ -124,11 +131,11 @@ app.post("/api/v1/payment-success", async (req, res) => {
             return planId;
           });
         const planType =
-          session.amount_total == 9900
+          session.amount_total === 9900
             ? "basic"
             : 9990
-            ? "pro"
-            : "business" || null;
+              ? "pro"
+              : "business" || null;
         const startDate = moment.unix(session.created).format("YYYY-MM-DD");
         const endDate = moment.unix(session.expires_at).format("YYYY-MM-DD");
 
@@ -138,7 +145,7 @@ app.post("/api/v1/payment-success", async (req, res) => {
         const durationInSeconds = (date2.getTime() - date1.getTime()) / 1000;
         let Difference_In_Time = date2.getTime() - date1.getTime();
         let durationInDays = Math.round(
-          Difference_In_Time / (1000 * 3600 * 24)
+          Difference_In_Time / (1000 * 3600 * 24),
         );
         await admin
           .firestore()
@@ -154,7 +161,7 @@ app.post("/api/v1/payment-success", async (req, res) => {
                 planDuration: durationInDays,
               },
             },
-            { merge: true }
+            { merge: true },
           );
       } catch (error) {
         console.error("Error retrieving subscription:", error);
