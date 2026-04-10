@@ -59,26 +59,46 @@ const Home = () => {
     });
   }, [userId, planType, navigate]);
 
+  const baseUrl = import.meta.env.VITE_APP_URL || "http://localhost:5000/api/";
+  const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   const checkout = async (plan) => {
-    fetch("http://localhost:5000/api/v1/create-subscription-checkout-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({ plan: plan, customerId: userId }),
-    })
-      .then((res) => {
-        if (res.ok) return res.json();
-        console.log(res);
-        return res.json().then((json) => Promise.reject(json));
-      })
-      .then(({ session }) => {
-        window.location = session.url;
-      })
-      .catch((e) => {
-        console.log(e.error);
-      });
+    try {
+      const response = await fetch(
+        `${cleanBaseUrl}/v1/create-subscription-checkout-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          mode: "cors",
+          credentials: "include",
+          body: JSON.stringify({ plan, customerId: userId }), // Shorthand for plan: plan
+        },
+      );
+
+      // Handle non-JSON or Error responses
+      if (!response.ok) {
+        const isJson = response.headers
+          .get("content-type")
+          ?.includes("application/json");
+        const errorData = isJson
+          ? await response.json()
+          : await response.text();
+
+        console.error("Server Error Content:", errorData);
+        throw new Error(
+          typeof errorData === "string" ? errorData : errorData.error,
+        );
+      }
+      const { session } = await response.json();
+
+      // Redirecting to Stripe/Payment Gateway
+      if (session?.url) {
+        window.location.href = session.url;
+      }
+    } catch (error) {
+      console.error("Checkout failed:", error.message);
+    }
   };
 
   const handleLogout = () => {
