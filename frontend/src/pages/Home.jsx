@@ -86,18 +86,27 @@ const Home = () => {
           : await response.text();
 
         console.error("Server Error Content:", errorData);
-        throw new Error(
-          typeof errorData === "string" ? errorData : errorData.error,
-        );
+        const errorMessage =
+          typeof errorData === "string"
+            ? errorData
+            : errorData.message ||
+              errorData.error ||
+              "An unknown error occurred";
+
+        throw new Error(errorMessage || "Server failed to create session");
       }
       const { session } = await response.json();
 
       // Redirecting to Stripe/Payment Gateway
       if (session?.url) {
         window.location.href = session.url;
+      } else {
+        throw new Error("Stripe session URL is missing");
       }
     } catch (error) {
       console.error("Checkout failed:", error.message);
+      // Provide feedback to the user
+      alert(`Could not start checkout: ${error.message}`);
     }
   };
 
