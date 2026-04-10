@@ -2,15 +2,16 @@ import React, { useState } from "react";
 import firebase from "../firebase/firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { firestore } from "../firebase/firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
-//import { ref, set } from "firebase/database";
+
 
 const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
@@ -20,7 +21,7 @@ const Register = () => {
       const res = await createUserWithEmailAndPassword(
         firebase,
         email,
-        password
+        password,
       );
 
       const userData = {
@@ -29,10 +30,10 @@ const Register = () => {
         name: name,
       };
       await setDoc(doc(firestore, "users", res.user.uid), userData);
-      //set(ref(database, "users/" + uid), userData);
+
       navigate("/login");
     } catch (error) {
-      console.log(error);
+      setError(error);
     }
   };
   return (
@@ -111,17 +112,16 @@ const Register = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
             <div class="flex flex-row gap-0">
-            <span class="text-gray-600 text-xs mt-1">
-              Must contain 1 uppercase letter, 1 number, min. 8 characters.
-            </span>
-             
+              <span class="text-gray-600 text-xs mt-1">
+                Must contain 1 uppercase letter, 1 number, min. 8 characters.
+              </span>
+
               <Link to="/">
-              <p class="text-blue-600 text-xs mt-1">SignIn</p>
+                <p class="text-blue-600 text-xs mt-1">SignIn</p>
               </Link>
-              
             </div>
-           
           </div>
+          {error && <span className="m-4 text-sm text-red-500">{error}</span>}
           <button
             type="submit"
             class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
