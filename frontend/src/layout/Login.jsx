@@ -1,26 +1,52 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import firebase from "../firebase/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import ForgotPassword from "./ForgotPassword";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const navigate = useNavigate();
 
+  const getFriendlyErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case "auth/user-not-found":
+        return "No account found with this email. Please sign up first.";
+      case "auth/wrong-password":
+        return "The password you entered is incorrect. Please try again.";
+      case "auth/invalid-email":
+        return "That email address doesn't look right. Please check for typos.";
+      case "auth/user-disabled":
+        return "This account has been disabled. Please contact support.";
+      case "auth/invalid-credential":
+        // Firebase often uses this generic one for security (prevents account enumeration)
+        return "Invalid email or password. Please try again.";
+      case "auth/too-many-requests":
+        return "Too many failed attempts. Please wait a moment before trying again.";
+      default:
+        return "An unexpected error occurred. Please try again later.";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     try {
       const res = await signInWithEmailAndPassword(firebase, email, password);
       const user = res.user;
-      console.log(user);
       localStorage.setItem("user", JSON.stringify(user));
       if (res.user) navigate("/");
     } catch (error) {
-      console.log(error);
+      const friendlyMessage = getFriendlyErrorMessage(error.code);
+      setError(friendlyMessage);
+      console.error("Firebase Auth Error Code:", error.code);
     }
   };
+
   return (
     <div className="flex items-center justify-center h-screen w-full px-5 sm:px-0 ">
       <div className="flex bg-white rounded-lg shadow-lg border overflow-hidden max-w-sm lg:max-w-4xl w-full">
@@ -57,13 +83,15 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
 
-              <a
-                href="/anonymous"
+              <button
+                to="/forgotpassword"
                 className="text-xs text-gray-500 hover:text-gray-700 text-end  mt-2"
+                onClick={() => setIsForgotOpen(true)}
               >
                 Forget Password?
-              </a>
+              </button>
             </div>
+            {error && <span className="text-sm text-red-500">{error}</span>}
             <div className="mt-8">
               <button className="bg-blue-600 w-full border border-blue-300 rounded py-2 px-2 text-white font-bold hover:bg-blue-900">
                 Login
@@ -113,6 +141,11 @@ const Login = () => {
           </div>
         </div>
       </div>
+      {/* THE MODAL COMPONENT */}
+      <ForgotPassword
+        isOpen={isForgotOpen}
+        onClose={() => setIsForgotOpen(false)}
+      />
     </div>
   );
 };
