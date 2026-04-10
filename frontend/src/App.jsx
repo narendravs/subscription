@@ -1,11 +1,11 @@
 import "./App.css";
-import Login from "./layout/Login";
-import Home from "./layout/Home";
-import Cancel from "./layout/Cancel";
-import Register from "./layout/Register";
-import Success from "./layout/Success";
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import Cancel from "./pages/Cancel";
+import Register from "./pages/Register";
+import Success from "./pages/Success";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import ForgotPassword from "./layout/ForgotPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (

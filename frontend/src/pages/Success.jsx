@@ -56,6 +56,7 @@ const Success = () => {
       }
 
       console.log("Success:", data.message);
+      alert(`Success: ${data.message}`);
       navigate("/");
     } catch (err) {
       console.error("Payment Error:", err.message);
