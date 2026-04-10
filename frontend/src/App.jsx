@@ -1,11 +1,11 @@
 import "./App.css";
-import Login from "../src/layout/Login";
+import Login from "./layout/Login";
 import Home from "./layout/Home";
 import Cancel from "./layout/Cancel";
 import Register from "./layout/Register";
 import Success from "./layout/Success";
-import Anonymous from "./layout/Anonymous";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import ForgotPassword from "./layout/ForgotPassword";
 
 function App() {
   return (
@@ -16,7 +16,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/cancel" element={<Cancel />} />
         <Route path="/success" element={<Success />} />
-        <Route path="/anonymous" element={<Anonymous />} />
+        <Route path="/forgotpassword" element={<ForgotPassword />} />
       </Routes>
     </Router>
   );
