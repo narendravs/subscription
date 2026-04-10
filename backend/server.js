@@ -3,7 +3,6 @@ const admin = require("firebase-admin");
 const moment = require("moment");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const serviceAccount = require("./serviceAccountKey.json");
 
 require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
@@ -14,6 +13,7 @@ const port = process.env.PORT;
 app.use(express.json());
 app.use(bodyParser.json());
 
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.databaseURL,
