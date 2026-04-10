@@ -22,7 +22,12 @@ admin.initializeApp({
 
 const corsOptions = {
   // Must match your Vite dev server URL exactly
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    "https://subscription-dusky-eight.vercel.app",
+    "https://subscription-6y7i1coxo-narendras-projects-120792d2.vercel.app/",
+    "https://subscription-6y7i1coxo-narendras-projects-120792d2.vercel.app/",
+  ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
